@@ -1,6 +1,6 @@
 # Linux SSH Threat Analysis
 
-A end-to-end security operations project that automates Linux authentication log parsing, detects brute force and suspicious activity using Python, and visualizes threat data in a Splunk SIEM dashboard.
+A end-to-end security project that automates Linux log parsing, detects brute force attacks, and visualizes threat data in a Splunk SIEM dashboard.
 
 ![Linux SSH Threat Analysis Dashboard](screenshots/Linux_SSH_Threat_Analysis.png)
 
@@ -8,18 +8,19 @@ A end-to-end security operations project that automates Linux authentication log
 
 ## Overview
 
-This project simulates a real SOC analyst workflow: ingest raw Linux syslog data, automate threat detection with a custom Python parser, and surface findings in a SIEM for triage and investigation.
+This project simulates a real SOC analyst workflow: ingest raw Linux syslog data, run a custom Python script to detect threats, and surface findings in a SIEM dashboard for triage and investigation.
 
-**Dataset:** `Linux_2k.log` — 2,000 lines of real Linux authentication logs (June–July 2005)  
+**Dataset:** `Linux_2k.log` - 2,000 lines of real Linux authentication logs (June-July 2005)
+
 **Tools:** Python 3, Splunk Enterprise, CSV
 
 ---
 
-## Tools & Technologies
+## Tools and Technologies
 
 | Tool | Purpose |
 |---|---|
-| Python 3 | Log parsing, regex extraction, threat detection, CSV export |
+| Python 3 | Log parsing, pattern detection, threat scoring, CSV export |
 | Splunk Enterprise | SIEM ingestion, SPL queries, dashboard visualization |
 | Regex (`re`) | Structured field extraction from raw syslog |
 | CSV | Structured output for SIEM ingestion |
@@ -43,12 +44,12 @@ linux-log-analysis/
 
 ## How It Works
 
-### 1. Log Parsing (`log_analysis.py`)
+### 1. Log Parsing
 
-The script parses each syslog line using regex to extract structured fields:
+The script reads each line of the syslog file and uses regex patterns to extract structured fields:
 
-- **Timestamp**, **hostname**, **service**, **PID**
-- **Source IP**, **username**, **event type**, **severity**
+- Timestamp, hostname, service, PID
+- Source IP, username, event type, severity
 
 Eight event types are detected:
 
@@ -64,26 +65,26 @@ Eight event types are detected:
 
 ### 2. Threat Detection
 
-**Brute Force Detection** — flags any IP exceeding a configurable failure threshold (default: 5 attempts). IPs with 20+ failures are escalated to CRITICAL.
+**Brute Force Detection** flags any IP that exceeds a configurable failure threshold (default: 5 attempts). IPs with 20 or more failures are escalated to CRITICAL severity.
 
-**User Enumeration Detection** — identifies usernames repeatedly targeted in unknown/invalid user attempts, indicating account enumeration.
+**User Enumeration Detection** identifies usernames that were repeatedly targeted in unknown or invalid user attempts, which is a sign of account enumeration activity.
 
 ### 3. Output
 
 Three structured CSVs are exported for SIEM ingestion:
 
-- `suspicious_logs.csv` — all parsed events with full field extraction
-- `brute_force_alerts.csv` — flagged IPs with attempt counts and timestamps
-- `user_enumeration.csv` — targeted usernames and attempt counts
+- `suspicious_logs.csv` - all parsed events with full field extraction
+- `brute_force_alerts.csv` - flagged IPs with attempt counts and timestamps
+- `user_enumeration.csv` - targeted usernames and attempt counts
 
 ### 4. Splunk SIEM Dashboard
 
-CSVs are ingested into Splunk and visualized across six dashboard panels:
+The CSVs are ingested into Splunk and visualized across six dashboard panels:
 
 - Severity Distribution (Pie Chart)
 - Top 10 Attacking IPs (Bar Chart)
 - Attack Timeline by Event Type (Line Chart)
-- High & Critical Alert Triage (Table)
+- High and Critical Alert Triage (Table)
 - Brute Force Leaderboard (Table)
 - Event Breakdown by Type (Bar Chart)
 
@@ -96,7 +97,7 @@ CSVs are ingested into Splunk and visualized across six dashboard panels:
 | Total suspicious events parsed | 852 |
 | IPs flagged for brute force | 40 |
 | CRITICAL severity IPs | 4 |
-| Top attacker | `150.183.249.110` — 80 attempts in 2 minutes |
+| Top attacker | `150.183.249.110` - 80 attempts in under 2 minutes |
 | Auth failures | 489 HIGH severity events |
 | Unknown user attempts | 117 MEDIUM severity events |
 
@@ -104,10 +105,10 @@ CSVs are ingested into Splunk and visualized across six dashboard panels:
 
 | IP | Attempts | Severity | Window |
 |---|---|---|---|
-| 150.183.249.110 | 80 | CRITICAL | Jul 10 16:01 – 16:03 |
-| 207.243.167.114 | 23 | CRITICAL | Jul 26 07:02 – 07:04 |
-| n219076184117.netvigator.com | 23 | CRITICAL | Jun 22 03:17 – 03:18 |
-| 60.30.224.116 | 20 | CRITICAL | Jun 30 – Jul 1 |
+| 150.183.249.110 | 80 | CRITICAL | Jul 10 16:01 - 16:03 |
+| 207.243.167.114 | 23 | CRITICAL | Jul 26 07:02 - 07:04 |
+| n219076184117.netvigator.com | 23 | CRITICAL | Jun 22 03:17 - 03:18 |
+| 60.30.224.116 | 20 | CRITICAL | Jun 30 - Jul 1 |
 
 ---
 
@@ -151,6 +152,6 @@ source="suspicious_logs.csv" severity="HIGH" OR severity="CRITICAL" | table time
 
 ## Author
 
-**Rohan Chowdhury**  
-Cybersecurity Analyst Intern | WGU B.S. Cybersecurity & Information Assurance  
-[GitHub](https://github.com/chowdhuryrz) · [LinkedIn](https://linkedin.com/in/rohan-chowdhury)
+**Rohan Chowdhury**
+
+[GitHub](https://github.com/chowdhuryrz) | [LinkedIn](https://linkedin.com/in/rohan-chowdhury)
