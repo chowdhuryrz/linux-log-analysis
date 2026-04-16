@@ -8,11 +8,11 @@ A end-to-end security project that automates Linux log parsing, detects brute fo
 
 ## Overview
 
-This project simulates a real SOC analyst workflow: ingest raw Linux syslog data, run a custom Python script to detect threats, and surface findings in a SIEM dashboard for triage and investigation.
+This project simulates a real SOC analyst workflow across three phases: manual log review, automated Python-based detection, and SIEM visualization in Splunk. The goal is to identify brute force attacks and suspicious authentication activity from a real-world Linux syslog dataset.
 
-**Dataset:** `Linux_2k.log` - 2,000 lines of real Linux authentication logs (June-July 2005)
+**Dataset:** `Linux_2k.log` - 2,000 lines of real Linux authentication logs (June-July 2005) from [LogHub](https://github.com/logpai/loghub)
 
-**Tools:** Python 3, Splunk Enterprise, CSV
+**Tools:** Python 3, Splunk Enterprise, CSV, VS Code
 
 ---
 
@@ -24,6 +24,7 @@ This project simulates a real SOC analyst workflow: ingest raw Linux syslog data
 | Splunk Enterprise | SIEM ingestion, SPL queries, dashboard visualization |
 | Regex (`re`) | Structured field extraction from raw syslog |
 | CSV | Structured output for SIEM ingestion |
+| VS Code | Script development and log review |
 
 ---
 
@@ -44,9 +45,21 @@ linux-log-analysis/
 
 ## How It Works
 
-### 1. Log Parsing
+### Phase 1 - Manual Log Review
 
-The script reads each line of the syslog file and uses regex patterns to extract structured fields:
+Before automating anything, the log file was opened in VS Code and reviewed manually. The goal was to identify patterns by eye before writing any code.
+
+Suspicious indicators looked for:
+
+- Repeated failed logins from the same IP address
+- "user unknown" messages indicating username guessing
+- System alerts such as `logrotate: ALERT exited abnormally`
+
+Early findings from the first 40 lines showed repeated authentication failures from `218.188.2.4` and `220-135-151-1.hinet-ip.hinet.net`, both targeting the `root` account. This established the baseline for what to automate.
+
+### Phase 2 - Automated Detection
+
+The Python script reads the full log file and uses regex patterns to extract structured fields from each line:
 
 - Timestamp, hostname, service, PID
 - Source IP, username, event type, severity
@@ -63,13 +76,9 @@ Eight event types are detected:
 | Session Opened/Closed | INFO |
 | Logrotate Alert | LOW |
 
-### 2. Threat Detection
-
 **Brute Force Detection** flags any IP that exceeds a configurable failure threshold (default: 5 attempts). IPs with 20 or more failures are escalated to CRITICAL severity.
 
 **User Enumeration Detection** identifies usernames that were repeatedly targeted in unknown or invalid user attempts, which is a sign of account enumeration activity.
-
-### 3. Output
 
 Three structured CSVs are exported for SIEM ingestion:
 
@@ -77,9 +86,22 @@ Three structured CSVs are exported for SIEM ingestion:
 - `brute_force_alerts.csv` - flagged IPs with attempt counts and timestamps
 - `user_enumeration.csv` - targeted usernames and attempt counts
 
-### 4. Splunk SIEM Dashboard
+### Phase 3 - Splunk SIEM Dashboard
 
-The CSVs are ingested into Splunk and visualized across six dashboard panels:
+The CSVs are ingested into Splunk via **Settings > Add Data > Upload**. The following SPL query was used to filter for suspicious authentication activity:
+
+```spl
+source="suspicious_logs.csv" ("Failed password" OR "authentication failure" OR "invalid user" OR "user unknown")
+```
+
+Results were analyzed across four Splunk views:
+
+- **Events** - scrolled through individual flagged log lines to spot repeat offenders
+- **Patterns** - confirmed that "Failed password for root" was the dominant pattern, indicating systematic rather than random activity
+- **Statistics** - grouped events by IP and username to identify the highest-volume attackers
+- **Visualization** - plotted authentication failures over time as a line chart, revealing sharp bursty spikes consistent with automated brute force scripts
+
+The final dashboard has six panels:
 
 - Severity Distribution (Pie Chart)
 - Top 10 Attacking IPs (Bar Chart)
@@ -109,6 +131,8 @@ The CSVs are ingested into Splunk and visualized across six dashboard panels:
 | 207.243.167.114 | 23 | CRITICAL | Jul 26 07:02 - 07:04 |
 | n219076184117.netvigator.com | 23 | CRITICAL | Jun 22 03:17 - 03:18 |
 | 60.30.224.116 | 20 | CRITICAL | Jun 30 - Jul 1 |
+
+The activity pattern across all top attackers is consistent with automated brute force scripts targeting the `root` account, with bursts of attempts occurring within seconds of each other.
 
 ---
 
